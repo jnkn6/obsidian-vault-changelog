@@ -109,14 +109,14 @@ export default class Changelog extends Plugin {
       )
       .sort((a, b) => (a.stat.mtime < b.stat.mtime ? 1 : -1))
       .slice(0, this.settings.numberOfFilesToShow);
-    let changelogContent = ``;
+    let changelogContent = `# Changelog\n`;
     let header = ``;
     for (let recentlyEditedFile of recentlyEditedFiles) {
       // TODO: make date format configurable (and validate it)
       const humanTime = window
         .moment(recentlyEditedFile.stat.mtime)
         // date is already shown in the titles
-        .format("YYYY-MM-DD HH[h]mm");
+        .format("YYYY-MM-DD HH:mm");
         if (header != humanTime.substring(0,10)) {
         header = humanTime.substring(0,10)
         changelogContent += `## ${header}\n`
@@ -128,8 +128,21 @@ export default class Changelog extends Plugin {
 
   async writeInFile(filePath: string, content: string) {
     const file = this.app.vault.getAbstractFileByPath(filePath);
+    let old = "";
+    // read old file
+    if (file instanceof TFile){
+      const oldContent = await this.app.vault.read(file);
+      const parsed = oldContent.split("# Changelog\n");
+      if (parsed.length > 0){
+        old = parsed[0];
+      }
+    } else {
+      new Notice("Couldn't read changelog: check the file path");
+    }
+    
+    // add updated change log
     if (file instanceof TFile) {
-      await this.app.vault.modify(file, content);
+      await this.app.vault.modify(file, old + content);
     } else {
       new Notice("Couldn't write changelog: check the file path");
     }
